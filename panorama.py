@@ -77,7 +77,34 @@ def ransac(keypoints1, keypoints2, matches, n_iters=300, threshold=20):
     #TODO 2 : Implémentez ici la méthode RANSAC pour trouver une transformation robuste
     # entre deux images image1 et image2.
     # TODO-BLOC-DEBUT    
-    raise NotImplementedError("TODO 2 : dans panorama.py non implémenté")
+    N = matches.shape[0]
+    n_samples = int(N * 0.2)
+
+    matched1 = pad(keypoints1[matches[:, 0]])
+    matched2 = pad(keypoints2[matches[:, 1]])
+
+    max_inliers = np.zeros(N)
+    n_inliers = 0
+    for i in range(n_iters):
+        inliersArr = np.zeros(N)
+        idx = np.random.choice(N, n_samples, replace=False)
+        p1 = matched1[idx, :]
+        p2 = matched2[idx, :]
+
+        H, residuals, rank, s = np.linalg.lstsq(p2, p1, rcond=None)
+        H[:, 2] = np.array([0, 0, 1])
+
+        output = np.dot(matched2, H)
+        inliersArr = np.linalg.norm(output-matched1, axis=1)**2 < threshold
+        inliersCount = np.sum(inliersArr)
+
+        if inliersCount > n_inliers:
+            max_inliers = inliersArr.copy() 
+            n_inliers = inliersCount
+
+    
+    H, residuals, rank, s = np.linalg.lstsq(matched2[max_inliers], matched1[max_inliers], rcond=None)
+    H[:, 2] = np.array([0, 0, 1])
     # TODO-BLOC-FIN
     
     return H, matches[max_inliers]
